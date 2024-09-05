@@ -22,17 +22,41 @@ router.post('/', (req, res) => {
 });
 
 
-router.get('/all',(req,res)=>{
-    const { db } = req;
+// router.get('/all',(req,res)=>{
+//     const { db } = req;
 
-    const ref = db.ref('Posts');
-    ref.once('value', (snapshot) => {
-    //   console.log(snapshot.val());
-      res.send(snapshot.val())
-    });
+//     const ref = db.ref('Posts');
+//     ref.once('value', (snapshot) => {
+//       console.log(snapshot.val());
+//       res.send(snapshot.val())
+//     });
 
 
    
-  })
+//   })
+router.get('/all', (req, res) => {
+    const { db } = req;
+    const ref = db.ref('Posts');
+
+    ref.once('value')
+        .then(snapshot => {
+            const data = snapshot.val();
+
+            // console.log('Data fetched from Firebase:', data);
+
+            if (data) {
+                const dataArray = Object.values(data);
+                // console.log('Array of all children:', dataArray);
+                res.json(dataArray);
+            } else {
+                // console.log('No data found under Posts');
+                res.status(404).send('No data found');
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching data:', error);
+            res.status(500).send('Internal Server Error');
+        });
+});
 
 module.exports = router;

@@ -1,6 +1,16 @@
 const express = require("express");
 const router = express.Router();
+const jwt = require('jsonwebtoken');
+const JWT_SECRET = process.env.JWT_SECRET;
 
+const generateToken =  (email) => {
+  return jwt.sign(
+    {
+      "username": email
+    },
+    JWT_SECRET
+  );
+};
 router.post("/", async (req, res) => {
     const { db } = req;
     const ref = db.ref('users');
@@ -16,8 +26,9 @@ router.post("/", async (req, res) => {
           email: email,
           Password:Password,
           }).then(() => {
-            console.log('Data stored successfully');
-        res.status(200).send("User Data stored successfully");
+        const token =generateToken(email);
+            console.log('Data stored successfully'+token);
+        res.status(200).json({Token:token});
           }).catch(error => {
             console.error('Error storing data:', error);
             res.status(400).send("Error storing User Data");

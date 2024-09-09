@@ -1,9 +1,9 @@
 const express = require("express");
 const router = express.Router();
+const authenticateToken=require('../authenticateToken')
 
 
-
-router.post('/', (req, res) => {
+router.post('/', authenticateToken, (req, res) => {
     const { db } = req;
     const {postId} =req.body;
     // const postId = '-O5dXs09xSEoYC487V9h';
@@ -21,20 +21,7 @@ router.post('/', (req, res) => {
     });
 });
 
-
-// router.get('/all',(req,res)=>{
-//     const { db } = req;
-
-//     const ref = db.ref('Posts');
-//     ref.once('value', (snapshot) => {
-//       console.log(snapshot.val());
-//       res.send(snapshot.val())
-//     });
-
-
-   
-//   })
-router.get('/all', (req, res) => {
+router.get('/all',authenticateToken, (req, res) => {
     const { db } = req;
     const ref = db.ref('Posts');
 
@@ -46,10 +33,8 @@ router.get('/all', (req, res) => {
 
             if (data) {
                 const dataArray = Object.values(data);
-                // console.log('Array of all children:', dataArray);
                 res.json(dataArray);
             } else {
-                // console.log('No data found under Posts');
                 res.status(404).send('No data found');
             }
         })

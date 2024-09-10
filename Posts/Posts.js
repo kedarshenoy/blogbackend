@@ -21,6 +21,8 @@ router.post('/', authenticateToken, (req, res) => {
     });
 });
 
+// I have this route i need to create a similar one in that i dont want to get all posts but i will get the search quarey  i need to match with all the title head and sub head 
+
 router.get('/all',authenticateToken, (req, res) => {
     const { db } = req;
     const ref = db.ref('Posts');
@@ -43,5 +45,89 @@ router.get('/all',authenticateToken, (req, res) => {
             res.status(500).send('Internal Server Error');
         });
 });
+
+
+
+
+// router.get('/search', authenticateToken, (req, res) => {
+//     const { db } = req;
+//     const { query } = req.query;  // Extracting the search query from the URL
+//     const ref = db.ref('Posts');
+
+//     ref.once('value')
+//         .then(snapshot => {
+//             const data = snapshot.val();
+
+//             if (data) {
+//                 const dataArray = Object.values(data);
+
+//                 // Filter the posts based on the search query in title, heading, or subheading
+//                 const filteredPosts = dataArray.filter(post => {
+//                     const postContent = post[0]; // Assuming the post data is the first item in the array
+//                     const title = postContent.find(item => item.type === 'PostTitle')?.text;
+//                     const heading = postContent.find(item => item.type === 'heading')?.text;
+//                     const subheading = postContent.find(item => item.type === 'subheading')?.text;
+
+//                     // Check if the search query matches title, heading, or subheading
+//                     return (
+//                         (title && title.toLowerCase().includes(query.toLowerCase())) ||
+//                         (heading && heading.toLowerCase().includes(query.toLowerCase())) ||
+//                         (subheading && subheading.toLowerCase().includes(query.toLowerCase()))
+//                     );
+//                 });
+
+//                 res.json(filteredPosts);
+//             } else {
+//                 res.status(404).send('No data found');
+//             }
+//         })
+//         .catch(error => {
+//             console.error('Error fetching data:', error);
+//             res.status(500).send('Internal Server Error');
+//         });
+// });
+
+
+router.get('/search', authenticateToken, (req, res) => {
+    const { db } = req;
+    const { query } = req.query;  // Extracting the search query from the URL
+    const ref = db.ref('Posts');
+
+    ref.once('value')
+        .then(snapshot => {
+            const data = snapshot.val();
+
+            if (data) {
+                const dataArray = Object.values(data);
+
+                // Filter the posts based on the search query in title, heading, or subheading
+                const filteredPosts = dataArray.filter(post => {
+                    // Ensure post is an array and has content
+                    if (Array.isArray(post) && post.length > 0) {
+                        const title = post.find(item => item.type === 'PostTitle')?.text;
+                        const heading = post.find(item => item.type === 'heading')?.text;
+                        const subheading = post.find(item => item.type === 'subheading')?.text;
+
+                        // Check if the search query matches title, heading, or subheading
+                        return (
+                            (title && title.toLowerCase().includes(query.toLowerCase())) ||
+                            (heading && heading.toLowerCase().includes(query.toLowerCase())) ||
+                            (subheading && subheading.toLowerCase().includes(query.toLowerCase()))
+                        );
+                    }
+                    return false;
+                });
+
+                res.json(filteredPosts);
+            } else {
+                res.status(404).send('No data found');
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching data:', error);
+            res.status(500).send('Internal Server Error');
+        });
+});
+
 
 module.exports = router;

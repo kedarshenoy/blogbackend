@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const authenticateToken=require('../authenticateToken')
 
-router.post('/', authenticateToken, (req, res) => {
+router.post('/', (req, res) => {
     const { db } = req;
     const {postId} =req.body;
     // const postId = '-O5dXs09xSEoYC487V9h';
@@ -43,6 +43,9 @@ router.get('/all', (req, res) => {
             res.status(500).send('Internal Server Error');
         });
 });
+
+
+
 
 
 router.get('/search', authenticateToken, (req, res) => {

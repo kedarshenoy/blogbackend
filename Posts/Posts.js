@@ -48,7 +48,7 @@ router.get('/all', (req, res) => {
 
 
 
-router.get('/search', authenticateToken, (req, res) => {
+router.get('/search',  (req, res) => {
     const { db } = req;
     const { query } = req.query;  // Extracting the search query from the URL
     const ref = db.ref('Posts');

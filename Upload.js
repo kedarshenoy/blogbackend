@@ -2,7 +2,7 @@
 
 
 
-router.post('/upload', upload.any(), async (req, res) => {
+router.post('/upload',authenticateToken, upload.any(), async (req, res) => {
     const documentContent = [];
     const allKeys = [...Object.keys(req.body), ...(req.files || []).map(file => file.fieldname)];
   

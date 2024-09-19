@@ -2,23 +2,23 @@ const express = require("express");
 const router = express.Router();
 const authenticateToken=require('../authenticateToken')
 
-router.post('/', (req, res) => {
-    const { db } = req;
-    const {postId} =req.body;
-    // const postId = '-O5dXs09xSEoYC487V9h';
-    const ref = db.ref('Posts').child(postId);
-    ref.once('value', (snapshot) => {
-        const postData = snapshot.val();
-        if (postData) {
-            res.json(postData);
-        } else {
-            res.status(404).send('Post not found');
-        }
-    }, (error) => {
-        console.error('Error fetching data:', error);
-        res.status(500).send('Error fetching data');
-    });
-});
+// router.post('/', (req, res) => {
+//     const { db } = req;
+//     const {postId} =req.body;
+//     // const postId = '-O5dXs09xSEoYC487V9h';
+//     const ref = db.ref('Posts').child(postId);
+//     ref.once('value', (snapshot) => {
+//         const postData = snapshot.val();
+//         if (postData) {
+//             res.json(postData);
+//         } else {
+//             res.status(404).send('Post not found');
+//         }
+//     }, (error) => {
+//         console.error('Error fetching data:', error);
+//         res.status(500).send('Error fetching data');
+//     });
+// });
 
 
 router.get('/all', (req, res) => {
@@ -82,6 +82,86 @@ router.get('/search',  (req, res) => {
             } else {
                 res.status(404).send('No data found');
             }
+        })
+        .catch(error => {
+            console.error('Error fetching data:', error);
+            res.status(500).send('Internal Server Error');
+        });
+});
+
+// router.get('/user-posts',authenticateToken, (req, res) => {
+//     const { db } = req;
+//     const username = req.user.username;  // Extract the username from req.user
+//     const ref = db.ref('Posts');
+
+//     ref.once('value')
+//         .then(snapshot => {
+//             const data = snapshot.val();
+
+//             if (data) {
+//                 const dataArray = Object.values(data);
+
+//                 // Filter posts by matching the top-level 'user' field with the username
+//                 const userPosts = dataArray.filter(post => {
+//                     return post.user === username;  // Match the username with post's 'user' field
+//                 });
+
+//                 res.json(userPosts);
+//             } else {
+//                 res.status(404).send('No data found');
+//             }
+//         })
+//         .catch(error => {
+//             console.error('Error fetching data:', error);
+//             res.status(500).send('Internal Server Error');
+//         });
+// });
+
+
+router.get('/user-posts',authenticateToken, (req, res) => {
+    const { db } = req;
+    const username = req.user.username;  // Extract the username (email) from req.user
+    const refPosts = db.ref('Posts');
+    const refUsers = db.ref('users');
+
+    // Fetch posts first
+    refPosts.once('value')
+        .then(snapshotPosts => {
+            const postsData = snapshotPosts.val();
+
+            if (!postsData) {
+                return res.status(404).send('No posts found');
+            }
+
+            const postsArray = Object.values(postsData);
+
+            // Filter posts by matching the username with the post's 'user' field (email)
+            const userPosts = postsArray.filter(post => post.user === username);
+
+            // Fetch users data
+            return refUsers.once('value').then(snapshotUsers => {
+                const usersData = snapshotUsers.val();
+
+                if (!usersData) {
+                    return res.status(404).send('No users found');
+                }
+
+                // Find the user object that matches the current username (email)
+                const currentUser = Object.values(usersData).find(user => user.email === username);
+
+                if (!currentUser) {
+                    return res.status(404).send('User not found');
+                }
+
+                // Add the user's name to each post in the response
+                const response = userPosts.map(post => ({
+                    ...post,
+                    userName: currentUser.name  // Add user's name from 'users' collection
+                }));
+
+                // Return the modified posts with the user's name
+                res.json(response);
+            });
         })
         .catch(error => {
             console.error('Error fetching data:', error);

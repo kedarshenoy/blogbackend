@@ -48,9 +48,51 @@ router.get('/all', (req, res) => {
 
 
 
-router.get('/search',  (req, res) => {
+// router.get('/search',  (req, res) => {
+//     const { db } = req;
+//     const { query } = req.query;  // Extracting the search query from the URL
+//     const ref = db.ref('Posts');
+
+//     ref.once('value')
+//         .then(snapshot => {
+//             const data = snapshot.val();
+
+//             if (data) {
+//                 const dataArray = Object.values(data);
+
+//                 // Filter the posts based on the search query in title, heading, or subheading
+//                 const filteredPosts = dataArray.filter(post => {
+//                     // Ensure post is an array and has content
+//                     if (Array.isArray(post) && post.length > 0) {
+//                         const title = post.find(item => item.type === 'PostTitle')?.text;
+//                         const heading = post.find(item => item.type === 'heading')?.text;
+//                         const subheading = post.find(item => item.type === 'subheading')?.text;
+
+//                         // Check if the search query matches title, heading, or subheading
+//                         return (
+//                             (title && title.toLowerCase().includes(query.toLowerCase())) ||
+//                             (heading && heading.toLowerCase().includes(query.toLowerCase())) ||
+//                             (subheading && subheading.toLowerCase().includes(query.toLowerCase()))
+//                         );
+//                     }
+//                     return false;
+//                 });
+
+//                 res.json(filteredPosts);
+//             } else {
+//                 res.status(404).send('No data found');
+//             }
+//         })
+//         .catch(error => {
+//             console.error('Error fetching data:', error);
+//             res.status(500).send('Internal Server Error');
+//         });
+// });
+
+
+router.get('/search', (req, res) => {
     const { db } = req;
-    const { query } = req.query;  // Extracting the search query from the URL
+    const { query } = req.query;  
     const ref = db.ref('Posts');
 
     ref.once('value')
@@ -62,11 +104,13 @@ router.get('/search',  (req, res) => {
 
                 // Filter the posts based on the search query in title, heading, or subheading
                 const filteredPosts = dataArray.filter(post => {
-                    // Ensure post is an array and has content
-                    if (Array.isArray(post) && post.length > 0) {
-                        const title = post.find(item => item.type === 'PostTitle')?.text;
-                        const heading = post.find(item => item.type === 'heading')?.text;
-                        const subheading = post.find(item => item.type === 'subheading')?.text;
+                    const contentArray = post.content;
+
+                    // Ensure contentArray exists and is an array
+                    if (Array.isArray(contentArray) && contentArray.length > 0) {
+                        const title = contentArray.find(item => item.type === 'PostTitle')?.text;
+                        const heading = contentArray.find(item => item.type === 'heading')?.text;
+                        const subheading = contentArray.find(item => item.type === 'subheading')?.text;
 
                         // Check if the search query matches title, heading, or subheading
                         return (
@@ -89,33 +133,6 @@ router.get('/search',  (req, res) => {
         });
 });
 
-// router.get('/user-posts',authenticateToken, (req, res) => {
-//     const { db } = req;
-//     const username = req.user.username;  // Extract the username from req.user
-//     const ref = db.ref('Posts');
-
-//     ref.once('value')
-//         .then(snapshot => {
-//             const data = snapshot.val();
-
-//             if (data) {
-//                 const dataArray = Object.values(data);
-
-//                 // Filter posts by matching the top-level 'user' field with the username
-//                 const userPosts = dataArray.filter(post => {
-//                     return post.user === username;  // Match the username with post's 'user' field
-//                 });
-
-//                 res.json(userPosts);
-//             } else {
-//                 res.status(404).send('No data found');
-//             }
-//         })
-//         .catch(error => {
-//             console.error('Error fetching data:', error);
-//             res.status(500).send('Internal Server Error');
-//         });
-// });
 
 
 router.get('/user-posts',authenticateToken, (req, res) => {

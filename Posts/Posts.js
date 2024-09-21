@@ -21,29 +21,79 @@ const authenticateToken=require('../authenticateToken')
 // });
 
 
+// router.get('/all', (req, res) => {
+//     const { db } = req;
+//     const ref = db.ref('Posts');
+
+//     ref.once('value')
+//         .then(snapshot => {
+//             const data = snapshot.val();
+
+//             // console.log('Data fetched from Firebase:', data);
+
+//             if (data) {
+//                 const dataArray = Object.values(data);
+//                 res.json(dataArray);
+//             } else {
+//                 res.status(404).send('No data found');
+//             }
+//         })
+//         .catch(error => {
+//             console.error('Error fetching data:', error);
+//             res.status(500).send('Internal Server Error');
+//         });
+// });
+
 router.get('/all', (req, res) => {
     const { db } = req;
-    const ref = db.ref('Posts');
+    const refPosts = db.ref('Posts');
+    const refUsers = db.ref('users');
 
-    ref.once('value')
-        .then(snapshot => {
-            const data = snapshot.val();
+    // Fetch posts first
+    refPosts.once('value')
+        .then(snapshotPosts => {
+            const postsData = snapshotPosts.val();
 
-            // console.log('Data fetched from Firebase:', data);
-
-            if (data) {
-                const dataArray = Object.values(data);
-                res.json(dataArray);
-            } else {
-                res.status(404).send('No data found');
+            if (!postsData) {
+                return res.status(404).send('No posts found');
             }
+
+            const postsArray = Object.values(postsData);
+
+            // Fetch users data
+            return refUsers.once('value').then(snapshotUsers => {
+                const usersData = snapshotUsers.val();
+
+                if (!usersData) {
+                    return res.status(404).send('No users found');
+                }
+
+                // Create a map of users by email for faster lookup
+                const usersMap = Object.values(usersData).reduce((acc, user) => {
+                    acc[user.email] = user;
+                    return acc;
+                }, {});
+
+                // Iterate over posts and add the corresponding userName while excluding 'user' and 'timestamp'
+                const response = postsArray.map(post => {
+                    const { user, timestamp, ...rest } = post;  // Exclude 'user' and 'timestamp'
+                    const currentUser = usersMap[user];  // Find user by email
+
+                    return {
+                        ...rest,
+                        userName: currentUser ? currentUser.name : 'Unknown User'  // Add user's name or 'Unknown User' if not found
+                    };
+                });
+
+                // Return the modified posts
+                res.json(response);
+            });
         })
         .catch(error => {
             console.error('Error fetching data:', error);
             res.status(500).send('Internal Server Error');
         });
 });
-
 
 
 
@@ -90,20 +140,82 @@ router.get('/all', (req, res) => {
 // });
 
 
+// router.get('/search', (req, res) => {
+//     const { db } = req;
+//     const { query } = req.query;  
+//     const ref = db.ref('Posts');
+
+//     ref.once('value')
+//         .then(snapshot => {
+//             const data = snapshot.val();
+
+//             if (data) {
+//                 const dataArray = Object.values(data);
+
+//                 // Filter the posts based on the search query in title, heading, or subheading
+//                 const filteredPosts = dataArray.filter(post => {
+//                     const contentArray = post.content;
+
+//                     // Ensure contentArray exists and is an array
+//                     if (Array.isArray(contentArray) && contentArray.length > 0) {
+//                         const title = contentArray.find(item => item.type === 'PostTitle')?.text;
+//                         const heading = contentArray.find(item => item.type === 'heading')?.text;
+//                         const subheading = contentArray.find(item => item.type === 'subheading')?.text;
+
+//                         // Check if the search query matches title, heading, or subheading
+//                         return (
+//                             (title && title.toLowerCase().includes(query.toLowerCase())) ||
+//                             (heading && heading.toLowerCase().includes(query.toLowerCase())) ||
+//                             (subheading && subheading.toLowerCase().includes(query.toLowerCase()))
+//                         );
+//                     }
+//                     return false;
+//                 });
+
+//                 res.json(filteredPosts);
+//             } else {
+//                 res.status(404).send('No data found');
+//             }
+//         })
+//         .catch(error => {
+//             console.error('Error fetching data:', error);
+//             res.status(500).send('Internal Server Error');
+//         });
+// });
+
 router.get('/search', (req, res) => {
     const { db } = req;
     const { query } = req.query;  
-    const ref = db.ref('Posts');
+    const refPosts = db.ref('Posts');
+    const refUsers = db.ref('users');
 
-    ref.once('value')
-        .then(snapshot => {
-            const data = snapshot.val();
+    // Fetch posts first
+    refPosts.once('value')
+        .then(snapshotPosts => {
+            const postsData = snapshotPosts.val();
 
-            if (data) {
-                const dataArray = Object.values(data);
+            if (!postsData) {
+                return res.status(404).send('No posts found');
+            }
+
+            const postsArray = Object.values(postsData);
+
+            // Fetch users data
+            return refUsers.once('value').then(snapshotUsers => {
+                const usersData = snapshotUsers.val();
+
+                if (!usersData) {
+                    return res.status(404).send('No users found');
+                }
+
+                // Create a map of users by email for faster lookup
+                const usersMap = Object.values(usersData).reduce((acc, user) => {
+                    acc[user.email] = user;
+                    return acc;
+                }, {});
 
                 // Filter the posts based on the search query in title, heading, or subheading
-                const filteredPosts = dataArray.filter(post => {
+                const filteredPosts = postsArray.filter(post => {
                     const contentArray = post.content;
 
                     // Ensure contentArray exists and is an array
@@ -122,10 +234,20 @@ router.get('/search', (req, res) => {
                     return false;
                 });
 
-                res.json(filteredPosts);
-            } else {
-                res.status(404).send('No data found');
-            }
+                // Iterate over filtered posts and add userName, while excluding 'user' and 'timestamp'
+                const response = filteredPosts.map(post => {
+                    const { user, timestamp, ...rest } = post;  // Exclude 'user' and 'timestamp'
+                    const currentUser = usersMap[user];  // Find user by email
+
+                    return {
+                        ...rest,
+                        userName: currentUser ? currentUser.name : 'Unknown User'  // Add user's name or 'Unknown User' if not found
+                    };
+                });
+
+                // Return the filtered posts with the user's name and without 'user' and 'timestamp'
+                res.json(response);
+            });
         })
         .catch(error => {
             console.error('Error fetching data:', error);
@@ -135,7 +257,59 @@ router.get('/search', (req, res) => {
 
 
 
-router.get('/user-posts',authenticateToken, (req, res) => {
+// router.get('/user-posts',authenticateToken, (req, res) => {
+//     const { db } = req;
+//     const username = req.user.username;  // Extract the username (email) from req.user
+//     const refPosts = db.ref('Posts');
+//     const refUsers = db.ref('users');
+
+//     // Fetch posts first
+//     refPosts.once('value')
+//         .then(snapshotPosts => {
+//             const postsData = snapshotPosts.val();
+
+//             if (!postsData) {
+//                 return res.status(404).send('No posts found');
+//             }
+
+//             const postsArray = Object.values(postsData);
+
+//             // Filter posts by matching the username with the post's 'user' field (email)
+//             const userPosts = postsArray.filter(post => post.user === username);
+
+//             // Fetch users data
+//             return refUsers.once('value').then(snapshotUsers => {
+//                 const usersData = snapshotUsers.val();
+
+//                 if (!usersData) {
+//                     return res.status(404).send('No users found');
+//                 }
+
+//                 // Find the user object that matches the current username (email)
+//                 const currentUser = Object.values(usersData).find(user => user.email === username);
+
+//                 if (!currentUser) {
+//                     return res.status(404).send('User not found');
+//                 }
+
+//                 // Add the user's name to each post in the response
+//                 const response = userPosts.map(post => ({
+//                     ...post,
+//                     userName: currentUser.name  // Add user's name from 'users' collection
+//                 }));
+
+//                 // Return the modified posts with the user's name
+//                 res.json(response);
+//             });
+//         })
+//         .catch(error => {
+//             console.error('Error fetching data:', error);
+//             res.status(500).send('Internal Server Error');
+//         });
+// });
+
+
+router.get('/user-posts', authenticateToken, (req, res) => {
     const { db } = req;
     const username = req.user.username;  // Extract the username (email) from req.user
     const refPosts = db.ref('Posts');
@@ -170,13 +344,16 @@ router.get('/user-posts',authenticateToken, (req, res) => {
                     return res.status(404).send('User not found');
                 }
 
-                // Add the user's name to each post in the response
-                const response = userPosts.map(post => ({
-                    ...post,
-                    userName: currentUser.name  // Add user's name from 'users' collection
-                }));
+                // Add the user's name to each post in the response, excluding 'user' and 'timestamp'
+                const response = userPosts.map(post => {
+                    const { user, timestamp, ...rest } = post; // Exclude 'user' and 'timestamp'
+                    return {
+                        ...rest,
+                        userName: currentUser.name  // Add user's name from 'users' collection
+                    };
+                });
 
-                // Return the modified posts with the user's name
+                // Return the modified posts with the user's name and without 'user' and 'timestamp'
                 res.json(response);
             });
         })
@@ -185,6 +362,7 @@ router.get('/user-posts',authenticateToken, (req, res) => {
             res.status(500).send('Internal Server Error');
         });
 });
+
 
 
 module.exports = router;
